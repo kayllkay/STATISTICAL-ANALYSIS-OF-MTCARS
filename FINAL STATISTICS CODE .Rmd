@@ -1,0 +1,187 @@
+---
+title: "STATISTICS ANALYSIS ON MTCARS DATASET"
+author: '100609406'
+date: "2022-12-17"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+```{r}
+data(mtcars)
+par(mfrow=c(1,2))
+hist(mtcars$mpg[mtcars$am == 0], main = "Automatic transmission", xlab = "mpg", col = "red")
+hist(mtcars$mpg[mtcars$am == 1], main = "Manual transmission", xlab = "mpg", col = "blue")
+
+```
+```{r}
+mtcars$am <- as.factor(mtcars$am)
+levels(mtcars$am) <- c("Automatic", "Manual")
+```
+
+```{r}
+head(mtcars)
+```
+
+#LOADING LIBRARIES
+```{r}
+library(devtools)
+library(knitcitations); cleanbib()
+cite_options(citation_format = "pandoc", check.entries=FALSE)
+library(bibtex)
+library(psych)
+library(curl)
+library(dplyr)
+library(knitcitations); cleanbib()
+cite_options(citation_format = "pandoc", check.entries=FALSE)
+library(bibtex)
+```
+```{r}
+library(knitr)
+data= read.csv("/Users/adegbolakehinde/Downloads/mtcars.csv")
+names(data)
+dim(data)
+attach(data)
+library(tidyr)
+library(GGally)
+ggpairs(mtcars)    
+mtcars_long <- pivot_longer(data,    # Reshape data frame
+                            c("mpg", "disp", "hp", "qsec"))
+ggplot(mtcars_long,                    # Draw histograms
+       aes(x = value)) +
+  geom_histogram() + 
+  facet_wrap(name ~ ., scales = "free")
+```
+
+```{r}
+hist(mtcars$mpg)
+```
+
+#TEST FOR NORMILTY(FOR NORMAL DISTRIBUTION)
+The initial step in this process is to conduct a "normality test" to check if the sample population is normally distributed. We expect the p-value obtained from the normality test to be greater than 0.05, which would allow us to accept the null hypothesis that states "The samples come from a Normal Distribution."
+```{r}
+shapiro.test(mtcars$mpg)
+```
+With a p-value of 0.1228814 returned from our normality test, we can proceed with our investigation, assuming that our sample is normal. We can also the visuals of this in the qqnorm plots below 
+
+
+A Q-Q plot is a graph that compares the distribution of the data to the normal distribution by plotting the data points against a line. If the data follows a normal distribution, the points on the plot should align closely with the line.
+```{r}
+## Plot with a qqnorm and line
+qqnorm(mtcars$mpg)
+qqline(mtcars$mpg)
+```
+
+
+
+#HYPOTHESIS TESTING
+Ho : The null hypothesis states that the there is no difference between the transmission types.
+
+Ha : The alternative hypothesis states that there is a significant difference between the mpg for different transmission types.
+
+```{r}
+aggregate(mpg~am, data = mtcars, mean)
+```
+# Perform a t-test to compare the mean mpg of cars with automatic transmission to the mean mpg of cars with manual transmission
+```{r}
+autoData <- mtcars[mtcars$am == "Automatic",]
+manualData <- mtcars[mtcars$am == "Manual",]
+t.test(autoData$mpg, manualData$mpg, var.equal = TRUE)
+
+```
+With a p-value as low as 0.000285, we can confidently reject the null hypothesis that the difference between transmission types is 0.
+When the p-value is small, typically less than 0.05, it suggests that there is strong evidence against the null hypothesis, which in this case is that there is no difference in mean mpg between cars with automatic and manual transmission. The test statistic, calculated as t-statistic, is used to calculate the probability of obtaining a test statistic as extreme or more extreme than the one calculated, given that the null hypothesis is true. The degree of freedom is a value used in the t-distribution, a probability distribution often used in hypothesis testing to compare means.
+It's crucial to verify that the assumptions of the t-test, such as the data being continuous and following a normal distribution, and the variances being equal, are met before carrying out the test.
+
+
+
+#CHI TEST
+To conduct this analysis, we will first determine if the 'cyl' and 'carb' variables are present in the 'mtcars' dataset and whether they exhibit a dependency. As there are many levels involved, it can be difficult to discern any correlation between the two variables. Therefore, we will utilize the chi-squared test as an alternative approach to analyze the relationship between 'cyl' and 'carb'.
+```{r}
+chisq.test(mtcars$carb, mtcars$cyl, correct = FALSE)
+```
+Our chi-squared test results indicate that there is a strong association between the variables carb and cyl, as the p-value is less than the 0.05 threshold for statistical significance. Therefore, we reject the null hypothesis and conclude that there is a significant relationship between carb and cyl.
+
+#ANOVA 
+This is used to test the differences in mean of mpg betweens cars with different numbers of cylinders 
+```{r}
+anova_cars = aov(mpg ~ cyl, data = mtcars)
+summary(anova_cars)
+```
+With the p-value lower than 0.05 indicates that theres no strong significant difference in mean of mpg between cars with different numbers of cylinders. The F-value is showing the ratio of the variation between the menas of the groups to the variatiom within the groups, th larger the F-value the more evidence against the null hypothesis. The mean-sq is the variance of the residuals.
+
+#MULTIVARIATE REGRESSION
+Since there are more than two explanatory variables, we can go for a multivariate regression model and fit the full model for data. All samples are independent of each other.
+
+The coefficients show the estimated impact of each independent variable on the dependent variable, while the p-values provide the likelihood of getting a coefficient as extreme or more extreme than the one calculated, assuming the null hypothesis is true. The t-values are used to evaluate the hypothesis that the coefficients are equal to zero, and the R-squared value reveals the percentage of variation in the dependent variable that is explained by the independent variables.
+```{r}
+multivariant_model = lm(mpg ~ hp + wt + qsec, data = mtcars)
+summary(multivariant_model)
+```
+
+WIth the result above, its seen thet the multivariate regression model explains a R-squared of 0.834 which indicates that 83% of the variation in mpg is explained by the independent variables hp, wt and qsec
+The coefficients of hp,wt,qsec have the p-value less than 0.05 wchich means they are statistically significant
+n brief, the multivariate regression analysis on the mtcars dataset demonstrates a strong association between the independent variables hp, wt and qsec and the dependent variable mpg. This means that these independent variables can be employed to anticipate the mpg.
+
+
+
+#LINEAR REGRESSION
+```{r}
+Linear_regression <- summary(lm(mpg ~ am, data = mtcars))
+Linear_regression
+```
+Examining the coefficients from the result summary, we can observe that cars with manual transmission have an average of ~7.25 mpg more than those with automatic transmission. The R-Squared value, however, reveals that only 36% of the variability in the data is explained by the model. To gain a better understanding of the data.
+
+# MULTIPLE LINEAR REGRESSION
+```{r}
+multiple_linear <- summary(lm(mpg ~ cyl + hp + wt + am, data = mtcars))
+multiple_linear
+```
+According to the multiple linear regression model, 84% of the variability in the data is explained by this model, therefore, we reject the null hypothesis. The fuel efficiency difference between cars with manual and automatic transmission is around ~2.15 miles per gallon. The feature that has the most impact on fuel efficiency is the horse power, followed by the weight of the vehicle. The transmission type, however, does not have a significant influence on fuel efficiency.
+
+
+```{r}
+multiregression <- lm(mpg ~ cyl + hp + wt + am, data = mtcars)
+Linearregression <- lm(mpg ~ am, data = mtcars)
+anova(Linearregression, multiregression)
+```
+
+
+Analysis of variance (ANOVA) resulted in p-value much lower than 0.05, 
+
+#Residuals analysis
+
+Points in “Residuals vs Fitted” shows in the appendix are randomly scattered with no obvious pattern. Points in Q-Q plot are on the line this shows indicating that the residuals are normaly distributed.
+
+```{r}
+par(mfrow=c(2, 2))
+plot(multiregression)
+```
+
+# CORRELATION
+
+```{r}
+data(mtcars)
+sort(cor(mtcars)[1,])
+```
+From the above result its clearly seen that wt,cyl,disp,hp,carb  have strong negative correlation with mpg while on the other hand qsec,gear,am all have positive correlation with mpg 
+
+#cor test - mpg ~ am
+```{r}
+cortest <- cor.test(mtcars$mpg, as.numeric(mtcars$am))
+cortest$p.value; cortest$conf.int
+```
+
+#COR TEST - MPG ~ CYL
+```{r}
+cortest <- cor.test(mtcars$mpg, as.numeric(mtcars$cyl))
+cortest$p.value; cortest$conf.int
+```
+
+```{r}
+# Calculate the correlation between mpg and hp
+cor_value = cor(mtcars$mpg, mtcars$hp)
+print(cor_value)
+```
+
